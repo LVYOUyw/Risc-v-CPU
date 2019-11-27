@@ -38,7 +38,8 @@ wire [6:0] funct7 = inst_i[`Funct7];
 reg[`RegBus] imm;
 reg instvalid;
 wire [`InstAddrBus] pc_plus_4;
-wire [`InstAddrBus] goal;
+wire [`InstAddrBus] goal1;
+wire [`InstAddrBus] goal2;
 
 assign pc_plus_4 = pc_i + 4;
 assign goal1 = pc_i + imm;
@@ -46,7 +47,7 @@ assign goal2 = reg1_o + imm;
 
 always @ (*) 
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || ignore_i == `True) 
     begin
         aluop_o <= 0;
         wd_o <= 0;
@@ -81,7 +82,8 @@ begin
             wreg_o <= 1'b1;
             reg1_read_o <= 1'b1;
             reg2_read_o <= 1'b0;
-            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};else imm <= {24'b1, inst_i[31:20]};
+            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};
+            else imm <= {24'b111111111111111111111111, inst_i[31:20]};
             instvalid <= `True;
             case (funct3) 
                 `Funct3_ori: 
@@ -187,9 +189,12 @@ begin
             reg1_read_o <= 1'b0;
             reg2_read_o <= 1'b0;
             instvalid <= `True;
-            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};else imm <= {24'b1, inst_i[31:20]};
+            if (inst_i[31] == 1'b0) 
+                imm <= {{11{0}}, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
+            else 
+                imm <= {11'b11111111111, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
             pc_store_o <= pc_plus_4;
-            jump_addr_o <=  goal;
+            jump_addr_o <=  goal1;
             jump_o <= `True;
             next_ignore_o <= `True;
             aluop_o <= `Jal;
@@ -200,7 +205,8 @@ begin
             reg1_read_o <= 1'b1;
             reg2_read_o <= 1'b0;
             instvalid <= `True;
-            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};else imm <= {24'b1, inst_i[31:20]};
+            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};
+            else imm <= {24'b111111111111111111111111, inst_i[31:20]};
             pc_store_o <= pc_plus_4;
             jump_addr_o <= goal2 & (~(32'b1));
             jump_o <= `True;

@@ -7,10 +7,15 @@ module riscv(
     output wire[`RegBus] rom_addr_o,
     output wire rom_ce_o
 );
+//if_in
+wire if_jump;
+wire[`InstAddrBus] if_jump_addr;
+
 // id_in
 wire[`InstAddrBus] pc;
 wire[`InstAddrBus] id_pc_i;
 wire[`InstBus] id_inst_i;
+wire id_ignore_i;
 
 //id_out
 wire[`AluOpBus] id_aluop_o;
@@ -18,6 +23,9 @@ wire[`RegBus] id_reg1_o;
 wire[`RegBus] id_reg2_o;
 wire id_wreg_o;
 wire[`RegAddrBus] id_wd_o;
+wire id_next_ignore_o;
+wire id_current_ignore;
+wire[`InstAddrBus] id_pc_store_o;
 
 //ex_in
 wire[`AluOpBus] ex_aluop_i;
@@ -25,6 +33,8 @@ wire[`RegBus] ex_reg1_i;
 wire[`RegBus] ex_reg2_i;
 wire ex_wreg_i;
 wire[`RegAddrBus] ex_wd_i;
+wire next_ignore_i;
+wire[`InstAddrBus] ex_pc_store_i;
 
 //ex_out
 wire ex_wreg_o;
@@ -58,7 +68,9 @@ pc_reg pc_reg0(
     .clk(clk), 
     .rst(rst),
     .pc(pc),
-    .ce(rom_ce_o)
+    .ce(rom_ce_o),
+    .jump(if_jump),
+    .jump_addr(if_jump_addr)
 );
 
 assign rom_addr_o = pc;
@@ -76,6 +88,7 @@ id id0(
     .rst(rst),
     .pc_i(id_pc_i),
     .inst_i(id_inst_i),
+    .ignore_i(id_current_ignore),
 
     //ex to id
     .ex_wreg_i(ex_wreg_o),
@@ -94,11 +107,19 @@ id id0(
     .reg2_read_o(reg2_read),
     .reg1_addr_o(reg1_addr),
     .reg2_addr_o(reg2_addr),
+
+    //id to ex
     .aluop_o(id_aluop_o),
     .reg1_o(id_reg1_o),
     .reg2_o(id_reg2_o),
     .wd_o(id_wd_o),
-    .wreg_o(id_wreg_o)
+    .wreg_o(id_wreg_o),
+    .next_ignore_o(id_next_ignore_o),
+    .pc_store_o(id_pc_store_o),
+    
+    //id to if
+    .jump_o(if_jump),
+    .jump_addr_o(if_jump_addr)
 );
 
 regfile regfile0(
@@ -124,12 +145,16 @@ id_ex id_ex0(
     .id_reg2(id_reg2_o),
     .id_wd(id_wd_o),
     .id_wreg(id_wreg_o),
+    .ignore_i(id_next_ignore_o),
+    .id_pc_store(id_pc_store_o),
 
     .ex_aluop(ex_aluop_i),
     .ex_reg1(ex_reg1_i),
     .ex_reg2(ex_reg2_i),
     .ex_wd(ex_wd_i),
-    .ex_wreg(ex_wreg_i)
+    .ex_wreg(ex_wreg_i),
+    .ignore_id(id_current_ignore),
+    .ex_pc_store(ex_pc_store_i)
 );
 
 ex ex0(
@@ -140,6 +165,7 @@ ex ex0(
     .reg2_i(ex_reg2_i),
     .wd_i(ex_wd_i),
     .wreg_i(ex_wreg_i),
+    .pc_store_i(ex_pc_store_i),
 
     .wd_o(ex_wd_o),
     .wreg_o(ex_wreg_o),
