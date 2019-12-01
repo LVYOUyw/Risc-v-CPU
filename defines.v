@@ -19,6 +19,7 @@
 `define Opcode_Iexe 7'b0010011
 `define Opcode_Imem 7'b0100011
 `define Opcode_R 7'b0110011
+`define Opcode_B 7'b1100011
 `define Opcode_jal 7'b1101111
 `define Opcode_jalr 7'b1100111
 
@@ -29,6 +30,12 @@
 `define Funct3_sltiu 3'b011
 `define Funct3_addi 3'b000
 `define Funct3_slli 3'b001
+`define Funct3_beq 3'b000
+`define Funct3_bne 3'b001
+`define Funct3_blt 3'b100
+`define Funct3_bge 3'b101
+`define Funct3_bltu 3'b110
+`define Funct3_bgeu 3'b111
 `define Funct7_srli 7'b0000000
 `define Funct7_srai 7'b0100000
 

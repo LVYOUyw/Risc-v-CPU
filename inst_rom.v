@@ -2,10 +2,9 @@
 
 module inst_rom(
 
-//	input	wire										clk,
-	input wire                    ce,
-	input wire[`InstAddrBus]			addr,
-	output reg[`InstBus]					inst
+	input wire clk,
+	input wire ce,
+	input wire[`InstAddrBus] addr,
 	
 );
 

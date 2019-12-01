@@ -40,14 +40,18 @@ reg instvalid;
 wire [`InstAddrBus] pc_plus_4;
 wire [`InstAddrBus] goal1;
 wire [`InstAddrBus] goal2;
+wire[`RegBus] reg1_o_abs;
+wire[`RegBus] reg2_o_abs;
 
-assign pc_plus_4 = pc_i + 4;
-assign goal1 = pc_i + imm;
+assign pc_plus_4 = pc_i;
+assign goal1 = pc_i + imm - 4;
 assign goal2 = reg1_o + imm;
+assign reg1_o_abs = ~reg1_o + 1'b1;
+assign reg2_o_abs = ~reg2_o + 1'b1;
 
 always @ (*) 
 begin
-    if (rst == `RstEnable || ignore_i == `True) 
+    if (rst == `RstEnable) //ignore not use
     begin
         aluop_o <= 0;
         wd_o <= 0;
@@ -58,7 +62,7 @@ begin
         reg1_read_o <= 1'b0;
         reg2_read_o <= 1'b0;
         imm <= 32'h0;
-        next_ignore_o <= `False;
+        if (opcode != 6'b0) next_ignore_o <= `False; else next_ignore_o <= `True;
         jump_o <= `False;
         jump_addr_o <= `ZeroWord;
         pc_store_o <= `ZeroWord;
@@ -212,6 +216,62 @@ begin
             jump_o <= `True;
             next_ignore_o <= `True;
             aluop_o <= `Jalr;
+        end
+        else if (opcode == `Opcode_B)
+        begin 
+            reg1_read_o <= 1'b1;
+            reg1_read_o <= 1'b1;
+            instvalid <= `True;
+            if (inst_i[31] == 1'b0)
+                imm <= {19'b0, inst_i[31], inst_i[7], inst_i[30:25], inst_i[11:8], 1'b0};
+            else 
+                imm <= {19'b1111111111111111111, inst_i[31], inst_i[7], inst_i[30:25], inst_i[11:8], 1'b0};
+            case (funct3) 
+                `Funct3_beq:
+                    if (reg1_o == reg2_o) 
+                    begin 
+                        next_ignore_o <= `True;
+                        jump_addr_o <= goal1;
+                        jump_o <= `True;
+                    end
+                `Funct3_bne:
+                    if (reg1_o != reg2_o) 
+                    begin
+                        next_ignore_o <= `True;
+                        jump_addr_o <= goal1;
+                        jump_o <= `True;
+                    end
+                `Funct3_blt:
+                    if ((reg1_o[31] && !reg1_o) || (reg1_o[31] && reg2_o[31] && reg1_o_abs > reg2_o_abs)
+                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o_abs < reg2_o_abs))  //signed 
+                    begin
+                        next_ignore_o <= `True;
+                        jump_addr_o <= goal1;
+                        jump_o <= `True;
+                    end
+                `Funct3_bge:
+                    if ((!reg1_o[31] && reg1_o) || (reg1_o[31] && reg2_o[31] && reg1_o_abs <= reg2_o_abs)
+                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o_abs >= reg2_o_abs)) //signed
+                    begin
+                        next_ignore_o <= `True;
+                        jump_addr_o <= goal1;
+                        jump_o <= `True;
+                    end
+                `Funct3_bltu:
+                    if (reg1_o < reg2_o) //unsigned 
+                    begin
+                        next_ignore_o <= `True;
+                        jump_addr_o <= goal1;
+                        jump_o <= `True;
+                    end
+                `Funct3_bgeu:
+                    if (reg1_o >= reg2_o) //unsigned 
+                    begin
+                        next_ignore_o <= `True;
+                        jump_addr_o <= goal1;
+                        jump_o <= `True;
+                    end
+            endcase
         end
     end
 end

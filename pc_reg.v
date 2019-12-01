@@ -18,7 +18,7 @@ always @ (posedge clk)
 begin
     if (ce == `ChipDisable) pc <= 32'h00000000;
     else if (jump == `True) pc <= jump_addr;
-    else pc <= pc + 4;
+    else pc <= pc + 1;
 end
 
 endmodule 
