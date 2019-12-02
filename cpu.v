@@ -16,6 +16,9 @@ module cpu(
 //if_in
 wire if_jump;
 wire[`InstAddrBus] if_jump_addr;
+wire if_req_i;
+wire if_stall_i;
+wire if_stall_req_i;
 
 // id_in
 wire[`InstAddrBus] pc;
@@ -46,11 +49,15 @@ wire[`InstAddrBus] ex_pc_store_i;
 wire ex_wreg_o;
 wire[`RegAddrBus] ex_wd_o;
 wire[`RegBus] ex_data_o;
+wire[`RegBus] ex_mem_addr;
+wire[`AluOpBus] ex_mem_aluop;
 
 //mem_in
 wire mem_wreg_i;
 wire[`RegAddrBus] mem_wd_i;
 wire[`RegBus] mem_data_i;
+wire[`RegBus] mem_mem_addr;
+wire[`AluOpBus] mem_mem_aluop;
 
 //mem_out
 wire mem_wreg_o;
@@ -70,24 +77,32 @@ wire[`RegBus] reg2_data;
 wire[`RegAddrBus] reg1_addr;
 wire[`RegAddrBus] reg2_addr;
 
+//mcu
+wire[`RegBus] mcu_mem_req;
+wire[`InstAddrBus] mcu_addr_o;
+
 pc_reg pc_reg0(
     .clk(clk_in), 
     .rst(rst_in),
     .pc(pc),
     .jump(if_jump),
+    .mem_stall(if_stall_i),
+    .if_stall(if_stall_req_i),
     .jump_addr(if_jump_addr)
 );
 
-assign mem_a = pc;
 
 if_id if_id0(
     .clk(clk_in),
     .rst(rst_in),
+    .if_request(if_req_i),
     .if_pc(pc),
     .if_inst(mem_din),
     .jump(if_jump),
     .id_pc(id_pc_i),
-    .id_inst(id_inst_i)
+    .if_stall(if_stall_i),
+    .id_inst(id_inst_i),
+    .if_stall_req(if_stall_req_i)
 );
 
 id id0(
@@ -161,6 +176,7 @@ id_ex id_ex0(
     .ex_wreg(ex_wreg_i),
     .ignore_id(id_current_ignore),
     .ex_pc_store(ex_pc_store_i)
+    
 );
 
 ex ex0(
@@ -173,6 +189,8 @@ ex ex0(
     .wreg_i(ex_wreg_i),
     .pc_store_i(ex_pc_store_i),
 
+    .mem_addr_o(ex_mem_addr),
+    .aluop_o(ex_mem_aluop),
     .wd_o(ex_wd_o),
     .wreg_o(ex_wreg_o),
     .data_o(ex_data_o)
@@ -185,7 +203,11 @@ ex_mem ex_mem0(
     .ex_wd(ex_wd_o),
     .ex_wreg(ex_wreg_o),
     .ex_data(ex_data_o),
+    .mem_addr_i(ex_mem_addr),
+    .aluop_i(ex_mem_aluop),
 
+    .mem_addr_o(mem_mem_addr),
+    .aluop_o(mem_mem_aluop),
     .mem_wd(mem_wd_i),
     .mem_wreg(mem_wreg_i),
     .mem_data(mem_data_i)
@@ -193,14 +215,20 @@ ex_mem ex_mem0(
 
 mem mem0(
     .rst(rst_in),
-
+    .clk(clk_in),
     .wd_i(mem_wd_i),
     .wreg_i(mem_wreg_i),
     .data_i(mem_data_i),
+    .mem_addr_i(mem_mem_addr),
+    .aluop_i(mem_mem_aluop),
+    .mem_data_i(mem_din),
 
     .wd_o(mem_wd_o),
     .wreg_o(mem_wreg_o),
-    .data_o(mem_data_o)
+    .data_o(mem_data_o),
+    .mem_req_stall(if_stall_i),
+    .mem_req_o(mcu_mem_req),
+    .mem_addr_o(mcu_addr_o)
 );
 
 mem_wb mem_wb0(
@@ -214,6 +242,16 @@ mem_wb mem_wb0(
     .wb_wd(wb_wd_i),
     .wb_wreg(wb_wreg_i),
     .wb_data(wb_data_i)
+);
+
+memctrl memctrl0(
+    .rst(rst_in),
+    .rdy(rdy_in),
+    .if_addr_i(pc),
+    .if_request(if_req_i),
+    .mem_request(mcu_mem_req),
+    .mem_addr_i(mcu_addr_o),
+    .mem_addr_o(mem_a)
 );
 
 endmodule

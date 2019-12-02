@@ -10,13 +10,16 @@ module ex(
  
     output reg[`RegAddrBus] wd_o,
     output reg wreg_o,
-    output reg[`RegBus] data_o
+    output reg[`RegBus] data_o,
+    output reg[`AluOpBus] aluop_o,
+    output reg[`InstAddrBus] mem_addr_o
 );
 
 reg[`RegBus] ans;
 wire[`RegBus] reg1_i_abs;
 wire[`RegBus] reg2_i_abs;
 wire reg1_slt_reg2;
+reg[2:0] cnt;
 
 assign reg1_i_abs = ~reg1_i + 1'b1;
 assign reg2_i_abs = ~reg2_i + 1'b1;
@@ -26,11 +29,17 @@ assign reg1_slt_reg2 = (!reg1_i[31] && reg2_i[31]) || (reg1_i[31] && reg2_i[31] 
 always @ (*) 
 begin
     if (rst == `RstEnable) 
-        ans <= `ZeroWord;
+    begin
+        data_o <= `ZeroWord;
+        wd_o <= 0;
+        wreg_o <= 0;
+        cnt <= 0;
+    end
     else 
     begin
         wd_o <= wd_i;
         wreg_o <= wreg_i;
+        aluop_o <= aluop_i;
         case (aluop_i) 
             `Ori:
                 data_o <= reg1_i | reg2_i;
@@ -74,6 +83,17 @@ begin
                 data_o <= pc_store_i;
             `Jalr:
                 data_o <= pc_store_i;
+            `Lb:
+                mem_addr_o <= reg1_i + reg2_i;
+            `Lh:
+                mem_addr_o <= reg1_i + reg2_i;
+            `Lw:
+                mem_addr_o <= reg1_i + reg2_i;
+            `Lbu:
+                mem_addr_o <= reg1_i + reg2_i;
+            `Lhu:
+                mem_addr_o <= reg1_i + reg2_i;
+
             default:
                 begin
                 end

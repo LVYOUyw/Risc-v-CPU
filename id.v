@@ -220,7 +220,7 @@ begin
         else if (opcode == `Opcode_B)
         begin 
             reg1_read_o <= 1'b1;
-            reg1_read_o <= 1'b1;
+            reg2_read_o <= 1'b1;
             instvalid <= `True;
             if (inst_i[31] == 1'b0)
                 imm <= {19'b0, inst_i[31], inst_i[7], inst_i[30:25], inst_i[11:8], 1'b0};
@@ -271,6 +271,25 @@ begin
                         jump_addr_o <= goal1;
                         jump_o <= `True;
                     end
+            endcase
+        end 
+        else if (opcode == `Opcode_Iload)
+        begin
+            wreg_o <= 1;
+            reg1_read_o <= 1;
+            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};
+            else imm <= {24'b111111111111111111111111, inst_i[31:20]};
+            case (funct3)
+                `Funct3_lb:
+                    aluop_o <= `Lb;
+                `Funct3_lh:
+                    aluop_o <= `Lh;
+                `Funct3_lw:
+                    aluop_o <= `Lw;
+                `Funct3_lbu:
+                    aluop_o <= `Lbu;
+                `Funct3_lhu:
+                    aluop_o <= `Lhu;
             endcase
         end
     end
