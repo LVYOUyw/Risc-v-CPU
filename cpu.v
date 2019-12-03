@@ -35,6 +35,7 @@ wire[`RegAddrBus] id_wd_o;
 wire id_next_ignore_o;
 wire id_current_ignore;
 wire[`InstAddrBus] id_pc_store_o;
+wire[`RegBus] id_immt;
 
 //ex_in
 wire[`AluOpBus] ex_aluop_i;
@@ -51,6 +52,7 @@ wire[`RegAddrBus] ex_wd_o;
 wire[`RegBus] ex_data_o;
 wire[`RegBus] ex_mem_addr;
 wire[`AluOpBus] ex_mem_aluop;
+wire[`RegBus] ex_immt;
 
 //mem_in
 wire mem_wreg_i;
@@ -63,6 +65,7 @@ wire[`AluOpBus] mem_mem_aluop;
 wire mem_wreg_o;
 wire[`RegAddrBus] mem_wd_o;
 wire[`RegBus] mem_data_o;
+wire mem_wmem_o;
 
 //wb_in
 wire wb_wreg_i;
@@ -80,6 +83,7 @@ wire[`RegAddrBus] reg2_addr;
 //mcu
 wire[`RegBus] mcu_mem_req;
 wire[`InstAddrBus] mcu_addr_o;
+wire[`RegBus] mem_write_data;
 
 pc_reg pc_reg0(
     .clk(clk_in), 
@@ -137,6 +141,7 @@ id id0(
     .wreg_o(id_wreg_o),
     .next_ignore_o(id_next_ignore_o),
     .pc_store_o(id_pc_store_o),
+    .immt(id_immt),
     
     //id to if
     .jump_o(if_jump),
@@ -168,6 +173,7 @@ id_ex id_ex0(
     .id_wreg(id_wreg_o),
     .ignore_i(id_next_ignore_o),
     .id_pc_store(id_pc_store_o),
+    .immt_i(id_immt),
 
     .ex_aluop(ex_aluop_i),
     .ex_reg1(ex_reg1_i),
@@ -175,7 +181,8 @@ id_ex id_ex0(
     .ex_wd(ex_wd_i),
     .ex_wreg(ex_wreg_i),
     .ignore_id(id_current_ignore),
-    .ex_pc_store(ex_pc_store_i)
+    .ex_pc_store(ex_pc_store_i),
+    .immt_o(ex_immt)
     
 );
 
@@ -188,6 +195,7 @@ ex ex0(
     .wd_i(ex_wd_i),
     .wreg_i(ex_wreg_i),
     .pc_store_i(ex_pc_store_i),
+    .immt(ex_immt),
 
     .mem_addr_o(ex_mem_addr),
     .aluop_o(ex_mem_aluop),
@@ -228,7 +236,9 @@ mem mem0(
     .data_o(mem_data_o),
     .mem_req_stall(if_stall_i),
     .mem_req_o(mcu_mem_req),
-    .mem_addr_o(mcu_addr_o)
+    .mem_addr_o(mcu_addr_o),
+    .wmem_o(mem_wmem_o),
+    .wmemd_o(mem_write_data)
 );
 
 mem_wb mem_wb0(
@@ -251,7 +261,11 @@ memctrl memctrl0(
     .if_request(if_req_i),
     .mem_request(mcu_mem_req),
     .mem_addr_i(mcu_addr_o),
-    .mem_addr_o(mem_a)
+    .mem_addr_o(mem_a),
+    .write_i(mem_wmem_o),
+    .write_o(mem_wr),
+    .wdata_i(mem_write_data),
+    .wdata_o(mem_dout)
 );
 
 endmodule

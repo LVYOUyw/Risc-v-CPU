@@ -24,6 +24,7 @@ module id(
     output reg[`RegBus] reg2_o,
     output reg[`RegAddrBus] wd_o, //write register address 
     output reg wreg_o,
+    output reg[`RegBus] immt,
 
     output reg jump_o,
     output reg[`InstAddrBus] jump_addr_o,
@@ -66,6 +67,7 @@ begin
         jump_o <= `False;
         jump_addr_o <= `ZeroWord;
         pc_store_o <= `ZeroWord;
+        immt <= `ZeroWord;
     end
     else 
     begin
@@ -290,6 +292,22 @@ begin
                     aluop_o <= `Lbu;
                 `Funct3_lhu:
                     aluop_o <= `Lhu;
+            endcase
+        end
+        else if (opcode == `Opcode_S)
+        begin
+            reg1_read_o <= 1;
+            reg2_read_o <= 1;
+            wreg_o <= 0;
+            if (inst_i[31] == 1'b0) immt <= {24'b0, inst_i[31:25], inst_i[11:7]};
+            else immt <= {24'b111111111111111111111111, inst_i[31:25], inst_i[11:7]};
+            case (funct3) 
+                `Funct3_sb:
+                    aluop_o <= `Sb;
+                `Funct3_sh:
+                    aluop_o <= `Sh;
+                `Funct3_sw:
+                    aluop_o <= `Sw;
             endcase
         end
     end

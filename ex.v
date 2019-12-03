@@ -7,6 +7,7 @@ module ex(
     input wire[`RegAddrBus] wd_i,
     input wire wreg_i,
     input wire[`InstAddrBus] pc_store_i,
+    input wire[`RegBus] immt,
  
     output reg[`RegAddrBus] wd_o,
     output reg wreg_o,
@@ -93,7 +94,21 @@ begin
                 mem_addr_o <= reg1_i + reg2_i;
             `Lhu:
                 mem_addr_o <= reg1_i + reg2_i;
-
+            `Sb:
+                begin
+                    mem_addr_o <= reg1_i + immt;
+                    data_o <= reg2_i;
+                end
+            `Sh:
+                begin
+                    mem_addr_o <= reg1_i + immt;
+                    data_o <= reg2_i;
+                end
+            `Sw:
+                begin
+                    mem_addr_o <= reg1_i + immt;
+                    data_o <= reg2_i;
+                end
             default:
                 begin
                 end

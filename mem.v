@@ -11,6 +11,8 @@ module mem(
 
     output reg[`RegAddrBus] wd_o,
     output reg wreg_o,
+    output reg wmem_o,
+    output reg[7:0] wmemd_o,
     output reg[`RegBus] data_o,
     output reg mem_req_o,
     output reg[`InstAddrBus] mem_addr_o,
@@ -25,6 +27,8 @@ reg[31:0] curaddr;
 reg[`RegAddrBus] wd;
 reg wreg;
 reg[`AluOpBus] aluop;
+reg wmem;
+
 
 always @ (posedge clk)
 begin
@@ -39,6 +43,8 @@ begin
         mem_req_stall <= 0;
         wd <= 0;
         wreg <= 0;
+        wmem_o <= 0;
+        wmemd_o <= `ZeroWord;
     end
     else 
     begin
@@ -50,14 +56,22 @@ begin
                         curaddr <= mem_addr_i;
                         mem_done <= 0;
                         mem_addr_o <= mem_addr_i;
+                        wmemd_o <= data_i[7:0];
+                        wmem_o <= (aluop_i >= 27 && aluop_i <= 29) ? 1'b1 : 1'b0;
                         wd <= wd_i;
                         wreg <= wreg_i;
                         aluop <= aluop_i;
+                        wmem <= (aluop_i >= 27 && aluop_i <= 29) ? 1'b1 : 1'b0;
+                        data1 <= data_i[15:8];
+                        data2 <= data_i[23:16];
+                        data3 <= data_i[31:24];
                     end    
                 3'b100:
                     begin
                         cnt <= 3'b000;
                         mem_addr_o <= curaddr + 1;
+                        wmemd_o <= data1;
+                        if (aluop == `Sb) wmem_o <= 0;
                     end   
                 3'b000:
                     begin
@@ -80,11 +94,22 @@ begin
                                     wd_o <= wd;
                                     wreg_o <= wreg;
                                 end
+                            `Sb:
+                                begin
+                                    mem_done <= 1;
+                                    data_o <= `ZeroWord;
+                                    cnt <= 3'b111;
+                                    wd_o <= wd;
+                                    wreg_o <= wreg;
+                                    wmem_o <= 0;
+                                end
                             default:
                                 begin  
                                     cnt <= 3'b001;
                                     data1 <= mem_data_i;
                                     mem_addr_o <= curaddr + 2;
+                                    wmemd_o <= data2;
+                                    if (aluop == `Sh) wmem_o <= 0;
                                     //$display("Assign: %b %b",data1, mem_data_i);
                                 end
                         endcase
@@ -110,11 +135,21 @@ begin
                                     wd_o <= wd;
                                     wreg_o <= wreg;
                                 end
+                            `Sh:
+                                begin
+                                    mem_done <= 1;
+                                    data_o <= `ZeroWord;
+                                    cnt <= 3'b111;
+                                    wd_o <= wd;
+                                    wreg_o <= wreg;
+                                    wmem_o <= 0;
+                                end
                             default:
                                 begin
                                     data2 <= mem_data_i;
                                     cnt <= 3'b010;
                                     mem_addr_o <= curaddr + 3;
+                                    wmemd_o <= data3;
                                 end
                         endcase
                     end
@@ -130,6 +165,7 @@ begin
                         cnt <= 3'b111;
                         wd_o <= wd;
                         wreg_o <= wreg;
+                        wmem_o <= 0;
                     end
                 
             endcase
@@ -164,6 +200,8 @@ begin
         wd_o <= 0;
         data_o <= 0;
         wreg_o <= 0;
+        wmem_o <= 0;
+        wmemd_o <= `ZeroWord;
     end
     else 
     begin

@@ -9,6 +9,7 @@ module id_ex(
     input wire id_wreg,
     input wire ignore_i,
     input wire[`InstAddrBus] id_pc_store,
+    input wire[`RegBus] immt_i,
 
     output reg[5:0] ex_aluop,
     output reg[`RegBus] ex_reg1,
@@ -16,7 +17,8 @@ module id_ex(
     output reg[`RegAddrBus] ex_wd,
     output reg ex_wreg,
     output reg[`InstAddrBus] ex_pc_store,
-    output reg ignore_id
+    output reg ignore_id,
+    output reg[`RegBus] immt_o
 );
 
 always @ (posedge clk) 
@@ -29,6 +31,7 @@ begin
         ex_wd <= 0;
         ex_wreg <= 0;
         ex_pc_store <= 0;
+        immt_o <= `ZeroWord;
     end
     else 
     begin
@@ -39,6 +42,7 @@ begin
         ex_wreg <= id_wreg;
         ignore_id <= ignore_i;
         ex_pc_store <= id_pc_store;
+        immt_o <= immt_i;
     end
 end
 endmodule
