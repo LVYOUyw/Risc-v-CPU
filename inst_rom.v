@@ -13,13 +13,6 @@ module inst_rom(
 	initial 
 	begin 
 		$readmemb ( "C:/Users/18617/Desktop/CPU/CPU/inst_rom.data", inst_mem);
-		$display("%b",inst_mem[0]);
-		$display("%b",inst_mem[1]);
-		$display("%b",inst_mem[2]);
-		$display("%b",inst_mem[3]);
-		$display("%b",inst_mem[4]);
-		$display("%b",inst_mem[5]);
-		$display("%b",inst_mem[6]);
 	end
 
 	always @ (*) begin

@@ -81,9 +81,9 @@ wire[`RegAddrBus] reg1_addr;
 wire[`RegAddrBus] reg2_addr;
 
 //mcu
-wire[`RegBus] mcu_mem_req;
+wire mcu_mem_req;
 wire[`InstAddrBus] mcu_addr_o;
-wire[`RegBus] mem_write_data;
+wire[7:0] mem_write_data;
 
 pc_reg pc_reg0(
     .clk(clk_in), 

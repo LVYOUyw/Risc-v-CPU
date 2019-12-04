@@ -22,6 +22,8 @@
 `define Opcode_B 7'b1100011
 `define Opcode_jal 7'b1101111
 `define Opcode_jalr 7'b1100111
+`define Opcode_lui 7'b0110111
+`define Opcode_auipc 7'b0010111
 `define Opcode_Iload 7'b0000011
 `define Opcode_S 7'b0100011
 
@@ -103,3 +105,5 @@
 `define Sb 6'd27
 `define Sh 6'd28
 `define Sw 6'd29
+`define Lui 6'd30
+`define Auipc 6'd31

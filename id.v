@@ -41,14 +41,14 @@ reg instvalid;
 wire [`InstAddrBus] pc_plus_4;
 wire [`InstAddrBus] goal1;
 wire [`InstAddrBus] goal2;
-wire[`RegBus] reg1_o_abs;
-wire[`RegBus] reg2_o_abs;
+wire[`RegBus] reg1_o_f;
+wire[`RegBus] reg2_o_f;
 
 assign pc_plus_4 = pc_i;
 assign goal1 = pc_i + imm - 4;
 assign goal2 = reg1_o + imm;
-assign reg1_o_abs = ~reg1_o + 1'b1;
-assign reg2_o_abs = ~reg2_o + 1'b1;
+assign reg1_o_f = ~reg1_o + 1'b1;
+assign reg2_o_f = ~reg2_o + 1'b1;
 
 always @ (*) 
 begin
@@ -82,7 +82,7 @@ begin
         imm <= `ZeroWord;
         next_ignore_o <= `False;
         jump_o <= `False;
-
+       // if (opcode != 7'b0) $display("inst: %x",inst_i);
         if (opcode == `Opcode_Iexe)
         begin        
             wreg_o <= 1'b1;
@@ -244,16 +244,16 @@ begin
                         jump_o <= `True;
                     end
                 `Funct3_blt:
-                    if ((reg1_o[31] && !reg1_o) || (reg1_o[31] && reg2_o[31] && reg1_o_abs > reg2_o_abs)
-                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o_abs < reg2_o_abs))  //signed 
+                    if ((reg1_o[31] && !reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f > reg2_o_f)
+                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o < reg2_o))  //signed 
                     begin
                         next_ignore_o <= `True;
                         jump_addr_o <= goal1;
                         jump_o <= `True;
                     end
                 `Funct3_bge:
-                    if ((!reg1_o[31] && reg1_o) || (reg1_o[31] && reg2_o[31] && reg1_o_abs <= reg2_o_abs)
-                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o_abs >= reg2_o_abs)) //signed
+                    if ((!reg1_o[31] && reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f <= reg2_o_f)
+                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o >= reg2_o)) //signed
                     begin
                         next_ignore_o <= `True;
                         jump_addr_o <= goal1;
@@ -309,6 +309,23 @@ begin
                 `Funct3_sw:
                     aluop_o <= `Sw;
             endcase
+        end
+        else if (opcode == `Opcode_lui) 
+        begin
+            wreg_o <= 1;
+            reg1_read_o <= 0;
+            reg2_read_o <= 0;
+            aluop_o <= `Lui;
+            immt <= {inst_i[31:12], 12'b0};
+        end
+        else if (opcode == `Opcode_auipc) 
+        begin
+            wreg_o <= 1;
+            reg1_read_o <= 0;
+            reg2_read_o <= 0;
+            aluop_o <= `Auipc;
+            reg1_o <= pc_plus_4 - 4;
+            immt <= {inst_i[31:12], 12'b0};
         end
     end
 end

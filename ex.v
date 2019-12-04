@@ -17,15 +17,15 @@ module ex(
 );
 
 reg[`RegBus] ans;
-wire[`RegBus] reg1_i_abs;
-wire[`RegBus] reg2_i_abs;
+wire[`RegBus] reg1_i_f;
+wire[`RegBus] reg2_i_f;
 wire reg1_slt_reg2;
 reg[2:0] cnt;
 
-assign reg1_i_abs = ~reg1_i + 1'b1;
-assign reg2_i_abs = ~reg2_i + 1'b1;
-assign reg1_slt_reg2 = (!reg1_i[31] && reg2_i[31]) || (reg1_i[31] && reg2_i[31] && reg1_i_abs > reg2_i_abs)
-                        || (!reg1_i[31] && !reg2_i[31] && reg1_i_abs < reg2_i_abs);
+assign reg1_i_f = ~reg1_i + 1'b1;
+assign reg2_i_f = ~reg2_i + 1'b1;
+assign reg1_slt_reg2 = (!reg1_i[31] && reg2_i[31]) || (reg1_i[31] && reg2_i[31] && reg1_i_f > reg2_i_f)
+                        || (!reg1_i[31] && !reg2_i[31] && reg1_i < reg2_i);
 
 always @ (*) 
 begin
@@ -63,7 +63,7 @@ begin
             `Add:
                 data_o <= reg1_i + reg2_i;
             `Sub:
-                data_o <= reg1_i + reg2_i;
+                data_o <= reg1_i - reg2_i;
             `Sll:
                 data_o <= reg1_i << reg2_i;
             `Slt:
@@ -109,6 +109,10 @@ begin
                     mem_addr_o <= reg1_i + immt;
                     data_o <= reg2_i;
                 end
+            `Lui:
+                data_o <= immt;
+            `Auipc:
+                data_o <= reg1_i + immt;
             default:
                 begin
                 end
