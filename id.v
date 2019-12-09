@@ -88,8 +88,8 @@ begin
             wreg_o <= 1'b1;
             reg1_read_o <= 1'b1;
             reg2_read_o <= 1'b0;
-            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};
-            else imm <= {24'b111111111111111111111111, inst_i[31:20]};
+            if (inst_i[31] == 1'b0) imm <= {20'b0, inst_i[31:20]};
+            else imm <= {20'b11111111111111111111, inst_i[31:20]};
             instvalid <= `True;
             case (funct3) 
                 `Funct3_ori: 
@@ -103,13 +103,11 @@ begin
                 `Funct3_slti:
                     aluop_o <= `Slti;
                 `Funct3_sltiu:
-                    begin
-                        imm <= {24'b0, inst_i[31:20]};
-                        aluop_o <= `Sltiu;
-                    end
+                    aluop_o <= `Sltiu;
                 `Funct3_slli:
                     begin
                         imm <= {27'b0, inst_i[`Rs2]};
+                        if (inst_i[25] == 1'b1) $display("WA");
                         aluop_o <= `Slli;
                     end
                 3'b101:
@@ -117,11 +115,13 @@ begin
                         if (funct7 == `Funct7_srli) 
                             begin
                                 imm <= {27'b0, inst_i[`Rs2]};
+                                if (inst_i[25] == 1'b1) $display("WA");
                                 aluop_o <= `Srli;    
                             end
                         else if (funct7 == `Funct7_srai)  
                             begin
                                 imm <= {27'b0, inst_i[`Rs2]};
+                                if (inst_i[25] == 1'b1) $display("WA");
                                 aluop_o <= `Srai;
                             end
                         else 
@@ -196,7 +196,7 @@ begin
             reg2_read_o <= 1'b0;
             instvalid <= `True;
             if (inst_i[31] == 1'b0) 
-                imm <= {{11{0}}, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
+                imm <= {11'b0, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
             else 
                 imm <= {11'b11111111111, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
             pc_store_o <= pc_plus_4;
@@ -211,8 +211,8 @@ begin
             reg1_read_o <= 1'b1;
             reg2_read_o <= 1'b0;
             instvalid <= `True;
-            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};
-            else imm <= {24'b111111111111111111111111, inst_i[31:20]};
+            if (inst_i[31] == 1'b0) imm <= {20'b0, inst_i[31:20]};
+            else imm <= {20'b11111111111111111111, inst_i[31:20]};
             pc_store_o <= pc_plus_4;
             jump_addr_o <= goal2 & (~(32'b1));
             jump_o <= `True;
@@ -252,8 +252,8 @@ begin
                         jump_o <= `True;
                     end
                 `Funct3_bge:
-                    if ((!reg1_o[31] && reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f <= reg2_o_f)
-                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o >= reg2_o)) //signed
+                    if (!((reg1_o[31] && !reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f > reg2_o_f)
+                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o < reg2_o))) //signed
                     begin
                         next_ignore_o <= `True;
                         jump_addr_o <= goal1;
@@ -279,8 +279,8 @@ begin
         begin
             wreg_o <= 1;
             reg1_read_o <= 1;
-            if (inst_i[31] == 1'b0) imm <= {24'b0, inst_i[31:20]};
-            else imm <= {24'b111111111111111111111111, inst_i[31:20]};
+            if (inst_i[31] == 1'b0) imm <= {20'b0, inst_i[31:20]};
+            else imm <= {20'b11111111111111111111, inst_i[31:20]};
             case (funct3)
                 `Funct3_lb:
                     aluop_o <= `Lb;
@@ -299,8 +299,8 @@ begin
             reg1_read_o <= 1;
             reg2_read_o <= 1;
             wreg_o <= 0;
-            if (inst_i[31] == 1'b0) immt <= {24'b0, inst_i[31:25], inst_i[11:7]};
-            else immt <= {24'b111111111111111111111111, inst_i[31:25], inst_i[11:7]};
+            if (inst_i[31] == 1'b0) immt <= {20'b0, inst_i[31:25], inst_i[11:7]};
+            else immt <= {20'b11111111111111111111, inst_i[31:25], inst_i[11:7]};
             case (funct3) 
                 `Funct3_sb:
                     aluop_o <= `Sb;

@@ -53,7 +53,7 @@ begin
             `Slti:
                 data_o <= reg1_slt_reg2;
             `Sltiu:
-                data_o <= reg1_slt_reg2;
+                data_o <= reg1_i < reg2_i;
             `Slli:
                 data_o <= reg1_i << reg2_i;
             `Srli:
@@ -75,7 +75,7 @@ begin
             `Srl:
                 data_o <= reg1_i >> reg2_i;
             `Sra:
-                data_o <= (({32{reg1_i[31]}}) << (6'd32 - reg2_i)) | (reg1_i >> reg2_i); 
+                data_o <= (({32{reg1_i[31]}}) << (6'd32 - reg2_i[4:0])) | (reg1_i >> reg2_i[4:0]); 
             `Or:
                 data_o <= reg1_i | reg2_i;
             `And:
