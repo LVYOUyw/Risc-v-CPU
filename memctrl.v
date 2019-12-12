@@ -24,6 +24,7 @@ begin
     else if (if_request == `True) 
     begin
         write_o <= 0;
+        wdata_o <= 0;
         mem_addr_o <= if_addr_i;
     end
     else if (mem_request == `True) 

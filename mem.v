@@ -20,6 +20,7 @@ module mem(
 );
 reg mem_done;
 reg[2:0] cnt;
+reg state;
 reg[7:0] data1;
 reg[7:0] data2;
 reg[7:0] data3;
@@ -27,7 +28,7 @@ reg[31:0] curaddr;
 reg[`RegAddrBus] wd;
 reg wreg;
 reg[`AluOpBus] aluop;
-reg wmem;
+reg[31:0] data;
 
 
 always @ (posedge clk)
@@ -38,13 +39,13 @@ begin
         data1 <= 0;
         data2 <= 0;
         data3 <= 0;
+        data <= 0;
         mem_done <= 1;
-        mem_req_o <= 0;
-        mem_req_stall <= 0;
         wd <= 0;
         wreg <= 0;
-        wmem_o <= 0;
-        wmemd_o <= `ZeroWord;
+        state <= 0;
+      //  wmem_o <= 0;
+      //  wmemd_o <= `ZeroWord;
     end
     else 
     begin
@@ -53,6 +54,7 @@ begin
                 3'b111:
                     begin
                         cnt <= 3'b100;
+                        state <= 1'b1;
                         curaddr <= mem_addr_i;
                         mem_done <= 0;
                         mem_addr_o <= mem_addr_i;
@@ -61,7 +63,6 @@ begin
                         wd <= wd_i;
                         wreg <= wreg_i;
                         aluop <= aluop_i;
-                        wmem <= (aluop_i >= 27 && aluop_i <= 29) ? 1'b1 : 1'b0;
                         data1 <= data_i[15:8];
                         data2 <= data_i[23:16];
                         data3 <= data_i[31:24];
@@ -79,28 +80,22 @@ begin
                             `Lb:
                                 begin
                                     if (mem_data_i[7] == 1'b0) 
-                                        data_o <= {24'b0, mem_data_i};
-                                    else data_o <= {24'b111111111111111111111111, mem_data_i};
+                                        data <= {24'b0, mem_data_i};
+                                    else data <= {24'b111111111111111111111111, mem_data_i};
                                     mem_done <= 1;
                                     cnt <= 3'b111;
-                                    wd_o <= wd;
-                                    wreg_o <= wreg;
                                 end
                             `Lbu:
                                 begin
-                                    data_o <= {24'b0, mem_data_i};
+                                    data <= {24'b0, mem_data_i};
                                     mem_done <= 1;
                                     cnt <= 3'b111;
-                                    wd_o <= wd;
-                                    wreg_o <= wreg;
                                 end
                             `Sb:
                                 begin
                                     mem_done <= 1;
-                                    data_o <= `ZeroWord;
+                                    data <= `ZeroWord;
                                     cnt <= 3'b111;
-                                    wd_o <= wd;
-                                    wreg_o <= wreg;
                                     wmem_o <= 0;
                                 end
                             default:
@@ -120,28 +115,22 @@ begin
                             `Lh:
                                 begin
                                     if (mem_data_i[7] == 1'b0) 
-                                        data_o <= {12'b0, mem_data_i, data1};
-                                    else data_o <= {12'b111111111111, mem_data_i, data1};
+                                        data <= {12'b0, mem_data_i, data1};
+                                    else data <= {12'b111111111111, mem_data_i, data1};
                                     mem_done <= 1;
                                     cnt <= 3'b111;
-                                    wd_o <= wd;
-                                    wreg_o <= wreg;
                                 end
                             `Lhu:
                                 begin
-                                    data_o <= {12'b0, mem_data_i, data1};
+                                    data <= {12'b0, mem_data_i, data1};
                                     mem_done <= 1;
                                     cnt <= 3'b111;
-                                    wd_o <= wd;
-                                    wreg_o <= wreg;
                                 end
                             `Sh:
                                 begin
                                     mem_done <= 1;
-                                    data_o <= `ZeroWord;
+                                    data <= `ZeroWord;
                                     cnt <= 3'b111;
-                                    wd_o <= wd;
-                                    wreg_o <= wreg;
                                     wmem_o <= 0;
                                 end
                             default:
@@ -160,17 +149,18 @@ begin
                     end    
                 3'b011:
                     begin
-                        data_o <= {mem_data_i, data3, data2, data1};
+                        data <= {mem_data_i, data3, data2, data1};
                         mem_done <= 1;
                         cnt <= 3'b111;
-                        wd_o <= wd;
-                        wreg_o <= wreg;
                         wmem_o <= 0;
                     end
                 
             endcase
         else 
+        begin
             mem_done <= 1;
+            state <= 1'b0;
+        end
     end
 end
  
@@ -200,14 +190,21 @@ begin
         wd_o <= 0;
         data_o <= 0;
         wreg_o <= 0;
-        wmem_o <= 0;
-        wmemd_o <= `ZeroWord;
     end
     else 
     begin
-        wd_o <= wd_i;
-        if (aluop_i < 22 || aluop_i > 29) data_o <= data_i;
-        wreg_o <= wreg_i;
+        if (state == 1'b0)
+        begin
+            data_o <= data_i; 
+            wd_o <= wd_i;
+            wreg_o <= wreg_i;
+        end
+        else 
+        begin
+            data_o <= data;
+            wd_o <= wd;
+            wreg_o <= wreg;
+        end
     end    
 end
 endmodule

@@ -37,7 +37,6 @@ wire [2:0] funct3 = inst_i[`Funct3];
 wire [6:0] funct7 = inst_i[`Funct7];
 
 reg[`RegBus] imm;
-reg instvalid;
 wire [`InstAddrBus] pc_plus_4;
 wire [`InstAddrBus] goal1;
 wire [`InstAddrBus] goal2;
@@ -57,7 +56,6 @@ begin
         aluop_o <= 0;
         wd_o <= 0;
         wreg_o <= `WriteDisable;
-        instvalid <= `False;
         reg1_addr_o <= 0;
         reg2_addr_o <= 0;
         reg1_read_o <= 1'b0;
@@ -74,15 +72,16 @@ begin
         aluop_o <= 0;
         wd_o <= inst_i[`Rd];
         wreg_o <= `WriteDisable;
-        instvalid <= `True;
         reg1_read_o <= 1'b0;
         reg2_read_o <= 1'b0;
         reg1_addr_o <= inst_i[`Rs1];
         reg2_addr_o <= inst_i[`Rs2];
         imm <= `ZeroWord;
+        immt <= `ZeroWord;
+        jump_addr_o <= `ZeroWord;
+        pc_store_o <= `ZeroWord;
         next_ignore_o <= `False;
         jump_o <= `False;
-       // if (opcode != 7'b0) $display("inst: %x",inst_i);
         if (opcode == `Opcode_Iexe)
         begin        
             wreg_o <= 1'b1;
@@ -90,7 +89,6 @@ begin
             reg2_read_o <= 1'b0;
             if (inst_i[31] == 1'b0) imm <= {20'b0, inst_i[31:20]};
             else imm <= {20'b11111111111111111111, inst_i[31:20]};
-            instvalid <= `True;
             case (funct3) 
                 `Funct3_ori: 
                     aluop_o <= `Ori;
@@ -107,7 +105,6 @@ begin
                 `Funct3_slli:
                     begin
                         imm <= {27'b0, inst_i[`Rs2]};
-                        if (inst_i[25] == 1'b1) $display("WA");
                         aluop_o <= `Slli;
                     end
                 3'b101:
@@ -115,13 +112,11 @@ begin
                         if (funct7 == `Funct7_srli) 
                             begin
                                 imm <= {27'b0, inst_i[`Rs2]};
-                                if (inst_i[25] == 1'b1) $display("WA");
                                 aluop_o <= `Srli;    
                             end
                         else if (funct7 == `Funct7_srai)  
                             begin
                                 imm <= {27'b0, inst_i[`Rs2]};
-                                if (inst_i[25] == 1'b1) $display("WA");
                                 aluop_o <= `Srai;
                             end
                         else 
@@ -130,7 +125,6 @@ begin
                                 reg1_read_o <= 1'b0;
                                 reg2_read_o <= 1'b0;
                                 imm <= `ZeroWord;
-                                instvalid <= `False;
                             end
                     end
                 default:
@@ -139,7 +133,6 @@ begin
                         reg1_read_o <= 1'b0;
                         reg2_read_o <= 1'b0;
                         imm <= `ZeroWord;
-                        instvalid <= `False;
                     end
             endcase
         end
@@ -148,7 +141,6 @@ begin
             wreg_o <= 1'b1;
             reg1_read_o <= 1'b1;
             reg2_read_o <= 1'b1;
-            instvalid <= `True;
             case (funct3)  
                 `Funct3_sll:
                     aluop_o <= `Sll; 
@@ -171,7 +163,6 @@ begin
                         reg1_read_o <= 1'b0;
                         reg2_read_o <= 1'b0;
                         imm <= `ZeroWord;
-                        instvalid <= `False;
                     end
                 3'b101:
                     if (funct7 == `Funct7_0) aluop_o <= `Srl;
@@ -182,7 +173,6 @@ begin
                         reg1_read_o <= 1'b0;
                         reg2_read_o <= 1'b0;
                         imm <= `ZeroWord;
-                        instvalid <= `False;
                     end
                 default:
                     begin
@@ -194,7 +184,6 @@ begin
             wreg_o <= 1'b1;
             reg1_read_o <= 1'b0;
             reg2_read_o <= 1'b0;
-            instvalid <= `True;
             if (inst_i[31] == 1'b0) 
                 imm <= {11'b0, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
             else 
@@ -210,7 +199,6 @@ begin
             wreg_o <= 1'b1;
             reg1_read_o <= 1'b1;
             reg2_read_o <= 1'b0;
-            instvalid <= `True;
             if (inst_i[31] == 1'b0) imm <= {20'b0, inst_i[31:20]};
             else imm <= {20'b11111111111111111111, inst_i[31:20]};
             pc_store_o <= pc_plus_4;
@@ -223,7 +211,6 @@ begin
         begin 
             reg1_read_o <= 1'b1;
             reg2_read_o <= 1'b1;
-            instvalid <= `True;
             if (inst_i[31] == 1'b0)
                 imm <= {19'b0, inst_i[31], inst_i[7], inst_i[30:25], inst_i[11:8], 1'b0};
             else 
@@ -324,7 +311,7 @@ begin
             reg1_read_o <= 0;
             reg2_read_o <= 0;
             aluop_o <= `Auipc;
-            reg1_o <= pc_plus_4 - 4;
+            imm <= pc_plus_4 - 4;
             immt <= {inst_i[31:12], 12'b0};
         end
     end

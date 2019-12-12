@@ -17,6 +17,7 @@ module ex(
 );
 
 reg[`RegBus] ans;
+reg tmp;
 wire[`RegBus] reg1_i_f;
 wire[`RegBus] reg2_i_f;
 wire reg1_slt_reg2;
@@ -35,12 +36,17 @@ begin
         wd_o <= 0;
         wreg_o <= 0;
         cnt <= 0;
+        aluop_o <= 0;
+        tmp <= 0;
+        mem_addr_o <= `ZeroWord;
     end
     else 
     begin
         wd_o <= wd_i;
         wreg_o <= wreg_i;
-        aluop_o <= aluop_i;
+        aluop_o <= aluop_i;  
+        mem_addr_o <= `ZeroWord;
+        data_o <= `ZeroWord;
         case (aluop_i) 
             `Ori:
                 data_o <= reg1_i | reg2_i;

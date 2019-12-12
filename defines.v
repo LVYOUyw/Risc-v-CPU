@@ -107,3 +107,4 @@
 `define Sw 6'd29
 `define Lui 6'd30
 `define Auipc 6'd31
+`define Nop 6'd32

@@ -56,9 +56,6 @@ begin
                 begin
                     id_inst <= {if_inst, inst3, inst2, inst1};
                     id_pc <= if_pc;
-                    inst1 <= 0;
-                    inst2 <= 0;
-                    inst3 <= 0;
                     cnt <= 3'b000;
                     tmp <= 3'b000;
                 end   
@@ -79,7 +76,7 @@ begin
         endcase
         if (jump == `True) cnt <= 3'b110;    
         if (if_stall == `True) stall <= `True;
-        if_request <= if_stall == 1'b1 ? 1'b0 : 1'b1;
+        if_request <= ~if_stall;
         //id_pc <= if_pc;
         //id_inst <= if_inst;
     end 
