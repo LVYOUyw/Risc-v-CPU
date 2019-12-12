@@ -37,6 +37,7 @@ wire [2:0] funct3 = inst_i[`Funct3];
 wire [6:0] funct7 = inst_i[`Funct7];
 
 reg[`RegBus] imm;
+wire reg1_slt_reg2;
 wire [`InstAddrBus] pc_plus_4;
 wire [`InstAddrBus] goal1;
 wire [`InstAddrBus] goal2;
@@ -48,6 +49,9 @@ assign goal1 = pc_i + imm - 4;
 assign goal2 = reg1_o + imm;
 assign reg1_o_f = ~reg1_o + 1'b1;
 assign reg2_o_f = ~reg2_o + 1'b1;
+assign reg1_slt_reg2 = (!reg1_o[31] && reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f > reg2_o_f)
+                        || (!reg1_o[31] && !reg2_o[31] && reg1_o < reg2_o);
+
 
 always @ (*) 
 begin
@@ -231,16 +235,14 @@ begin
                         jump_o <= `True;
                     end
                 `Funct3_blt:
-                    if ((reg1_o[31] && !reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f > reg2_o_f)
-                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o < reg2_o))  //signed 
+                    if (reg1_slt_reg2 == 1'b1)  //signed 
                     begin
                         next_ignore_o <= `True;
                         jump_addr_o <= goal1;
                         jump_o <= `True;
                     end
                 `Funct3_bge:
-                    if (!((reg1_o[31] && !reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f > reg2_o_f)
-                        ||(!reg1_o[31] && !reg2_o[31] && reg1_o < reg2_o))) //signed
+                    if (reg1_slt_reg2 == 1'b0) //signed
                     begin
                         next_ignore_o <= `True;
                         jump_addr_o <= goal1;
