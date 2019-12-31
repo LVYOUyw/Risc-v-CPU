@@ -20,18 +20,19 @@ begin
         mem_addr_o <= `ZeroWord;
         wdata_o <= 0;
         write_o <= 0;
+    end 
+    else if (mem_request == `True) 
+    begin
+        write_o <=  write_i ;
+        mem_addr_o <= mem_addr_i;
+        wdata_o <= wdata_i;
+       // if (write_o == 1'b1) $display("FUCK %x %x",mem_addr_o,wdata_o);
     end
     else if (if_request == `True) 
     begin
         write_o <= 0;
         wdata_o <= 0;
         mem_addr_o <= if_addr_i;
-    end
-    else if (mem_request == `True) 
-    begin
-        write_o <= write_i;
-        mem_addr_o <= mem_addr_i;
-        wdata_o <= wdata_i;
     end
     else 
     begin

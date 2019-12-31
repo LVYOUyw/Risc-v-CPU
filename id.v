@@ -26,9 +26,14 @@ module id(
     output reg wreg_o,
     output reg[`RegBus] immt,
 
+    output reg w_cache,
+    output reg[`InstBus] inst_o,
+    output reg[`InstAddrBus] pc_o,
+
     output reg jump_o,
     output reg[`InstAddrBus] jump_addr_o,
     output reg next_ignore_o,
+    output reg[6:0] stall_o,
     output reg[`InstAddrBus] pc_store_o
 );
 
@@ -43,19 +48,21 @@ wire [`InstAddrBus] goal1;
 wire [`InstAddrBus] goal2;
 wire[`RegBus] reg1_o_f;
 wire[`RegBus] reg2_o_f;
+wire[`InstAddrBus] pc_sub_4;
 
 assign pc_plus_4 = pc_i;
+assign pc_sub_4 = pc_i - 4;
 assign goal1 = pc_i + imm - 4;
 assign goal2 = reg1_o + imm;
 assign reg1_o_f = ~reg1_o + 1'b1;
 assign reg2_o_f = ~reg2_o + 1'b1;
-assign reg1_slt_reg2 = (!reg1_o[31] && reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f > reg2_o_f)
-                        || (!reg1_o[31] && !reg2_o[31] && reg1_o < reg2_o);
+assign reg1_slt_reg2 = (reg1_o[31] && !reg2_o[31]) || (reg1_o[31] && reg2_o[31] && reg1_o_f > reg2_o_f)
+                        || (!reg1_o[31] && !reg2_o[31] && reg1_o < reg2_o);            
 
 
 always @ (*) 
 begin
-    if (rst == `RstEnable) //ignore not use
+    if (rst == `RstEnable || ignore_i == 1'b1) //ignore not use
     begin
         aluop_o <= 0;
         wd_o <= 0;
@@ -65,15 +72,20 @@ begin
         reg1_read_o <= 1'b0;
         reg2_read_o <= 1'b0;
         imm <= 32'h0;
-        if (opcode != 6'b0) next_ignore_o <= `False; else next_ignore_o <= `True;
+        next_ignore_o <= `False;
         jump_o <= `False;
         jump_addr_o <= `ZeroWord;
         pc_store_o <= `ZeroWord;
         immt <= `ZeroWord;
+        w_cache <= 0;
+        inst_o <= 0;
+        pc_o <= 0;
+        stall_o <= 0;
     end
     else 
     begin
         aluop_o <= 0;
+        stall_o <= 0;
         wd_o <= inst_i[`Rd];
         wreg_o <= `WriteDisable;
         reg1_read_o <= 1'b0;
@@ -86,6 +98,17 @@ begin
         pc_store_o <= `ZeroWord;
         next_ignore_o <= `False;
         jump_o <= `False;
+        if (inst_i != 32'b0) 
+        begin
+            w_cache <= 1;
+            inst_o <= inst_i;
+            pc_o <= pc_sub_4;
+        end
+        else begin
+            w_cache <= 0;
+            inst_o <= 0;
+            pc_o <= 0;
+        end
         if (opcode == `Opcode_Iexe)
         begin        
             wreg_o <= 1'b1;
@@ -108,19 +131,19 @@ begin
                     aluop_o <= `Sltiu;
                 `Funct3_slli:
                     begin
-                        imm <= {27'b0, inst_i[`Rs2]};
+                        imm <= {26'b0, inst_i[25:25], inst_i[`Rs2]};
                         aluop_o <= `Slli;
                     end
                 3'b101:
                     begin
                         if (funct7 == `Funct7_srli) 
                             begin
-                                imm <= {27'b0, inst_i[`Rs2]};
+                                imm <= {26'b0, inst_i[25:25], inst_i[`Rs2]};
                                 aluop_o <= `Srli;    
                             end
                         else if (funct7 == `Funct7_srai)  
                             begin
-                                imm <= {27'b0, inst_i[`Rs2]};
+                                imm <= {26'b0, inst_i[25:25], inst_i[`Rs2]};
                                 aluop_o <= `Srai;
                             end
                         else 
@@ -236,7 +259,7 @@ begin
                     end
                 `Funct3_blt:
                     if (reg1_slt_reg2 == 1'b1)  //signed 
-                    begin
+                    begin 
                         next_ignore_o <= `True;
                         jump_addr_o <= goal1;
                         jump_o <= `True;
@@ -272,15 +295,35 @@ begin
             else imm <= {20'b11111111111111111111, inst_i[31:20]};
             case (funct3)
                 `Funct3_lb:
-                    aluop_o <= `Lb;
+                    begin
+                        aluop_o <= `Lb;
+                        stall_o <= 6'b001000;
+                        next_ignore_o <= `True;
+                    end
                 `Funct3_lh:
-                    aluop_o <= `Lh;
+                    begin
+                        aluop_o <= `Lh;
+                        stall_o <= 6'b010000;
+                        next_ignore_o <= `True;
+                    end
                 `Funct3_lw:
-                    aluop_o <= `Lw;
+                    begin
+                        aluop_o <= `Lw;
+                        stall_o <= 7'b1000000;
+                        next_ignore_o <= `True;
+                    end
                 `Funct3_lbu:
-                    aluop_o <= `Lbu;
+                    begin
+                        aluop_o <= `Lbu;
+                        stall_o <= 6'b001000;
+                        next_ignore_o <= `True;
+                    end
                 `Funct3_lhu:
-                    aluop_o <= `Lhu;
+                    begin
+                        aluop_o <= `Lhu;
+                        stall_o <= 6'b010000;
+                        next_ignore_o <= `True;
+                    end
             endcase
         end
         else if (opcode == `Opcode_S)
@@ -292,11 +335,24 @@ begin
             else immt <= {20'b11111111111111111111, inst_i[31:25], inst_i[11:7]};
             case (funct3) 
                 `Funct3_sb:
-                    aluop_o <= `Sb;
+                    begin
+                        aluop_o <= `Sb;
+                        stall_o <= 6'b001000;
+                        next_ignore_o <= `True;
+                    end
                 `Funct3_sh:
-                    aluop_o <= `Sh;
+                    begin
+                        aluop_o <= `Sh;
+                        stall_o <= 6'b010000;
+                        next_ignore_o <= `True;
+                    end
                 `Funct3_sw:
-                    aluop_o <= `Sw;
+                    begin
+                        aluop_o <= `Sw;
+                        stall_o <= 7'b1000000;
+                        next_ignore_o <= `True;
+                    end
+
             endcase
         end
         else if (opcode == `Opcode_lui) 
@@ -339,7 +395,7 @@ always @ (*)
 begin
     if (rst == `RstEnable) 
         reg2_o <= `ZeroWord;
-    else if ((reg2_read_o == 1'b1) && (ex_wreg_i == 1'b1) && (ex_wd_i == reg1_addr_o)) 
+    else if ((reg2_read_o == 1'b1) && (ex_wreg_i == 1'b1) && (ex_wd_i == reg2_addr_o)) 
         reg2_o <= ex_wdata_i;
     else if ((reg2_read_o == 1'b1) && (mem_wreg_i == 1'b1) && (mem_wd_i == reg2_addr_o)) 
         reg2_o <= mem_wdata_i;

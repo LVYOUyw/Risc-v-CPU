@@ -65,13 +65,16 @@ begin
             `Srli:
                 data_o <= reg1_i >> reg2_i;
             `Srai:
-                data_o <= (({32{reg1_i[31]}}) << (6'd32 - reg2_i)) | (reg1_i >> reg2_i); 
+                begin
+                    data_o <= (({32{reg1_i[31]}}) << (6'd32 - reg2_i)) | (reg1_i >> reg2_i); 
+                  //  $display("Srai: %d %d %d",reg1_i,reg2_i,(({32{reg1_i[31]}}) << (6'd32 - reg2_i)) | (reg1_i >> reg2_i));
+                end
             `Add:
                 data_o <= reg1_i + reg2_i;
             `Sub:
                 data_o <= reg1_i - reg2_i;
             `Sll:
-                data_o <= reg1_i << reg2_i;
+                data_o <= reg1_i << reg2_i[4:0];
             `Slt:
                 data_o <= reg1_slt_reg2;
             `Sltu:
@@ -79,9 +82,12 @@ begin
             `Xor:
                 data_o <= reg1_i ^ reg2_i;
             `Srl:
-                data_o <= reg1_i >> reg2_i;
+                data_o <= reg1_i >> reg2_i[4:0];
             `Sra:
-                data_o <= (({32{reg1_i[31]}}) << (6'd32 - reg2_i[4:0])) | (reg1_i >> reg2_i[4:0]); 
+                begin
+                    data_o <= (({32{reg1_i[31]}}) << (6'd32 - reg2_i[4:0])) | (reg1_i >> reg2_i[4:0]); 
+                    //$display("Sra: %d %d %d",reg1_i,reg2_i[4:0],(({32{reg1_i[31]}}) << (6'd32 - reg2_i[4:0])) | (reg1_i >> reg2_i[4:0]));
+                end
             `Or:
                 data_o <= reg1_i | reg2_i;
             `And:

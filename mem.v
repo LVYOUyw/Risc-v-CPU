@@ -15,8 +15,7 @@ module mem(
     output reg[7:0] wmemd_o,
     output reg[`RegBus] data_o,
     output reg mem_req_o,
-    output reg[`InstAddrBus] mem_addr_o,
-    output reg mem_req_stall
+    output reg[`InstAddrBus] mem_addr_o
 );
 reg mem_done;
 reg[2:0] cnt;
@@ -44,8 +43,9 @@ begin
         wd <= 0;
         wreg <= 0;
         state <= 0;
-      //  wmem_o <= 0;
-      //  wmemd_o <= `ZeroWord;
+        wmem_o <= 0;
+        wmemd_o <= `ZeroWord;
+        mem_addr_o <= 0;
     end
     else 
     begin
@@ -69,10 +69,19 @@ begin
                     end    
                 3'b100:
                     begin
-                        cnt <= 3'b000;
-                        mem_addr_o <= curaddr + 1;
-                        wmemd_o <= data1;
-                        if (aluop == `Sb) wmem_o <= 0;
+                        if (aluop == `Sb || aluop == `Lb || aluop == `Lbu) 
+                        begin
+                            //if (aluop == `Sb) $display("Sb %x %x",curaddr,wmem_o);
+                            wmem_o <= 0;
+                            mem_addr_o <= 0;
+                            wmemd_o <= 0;
+                        end
+                        else 
+                        begin
+                            mem_addr_o <= curaddr + 1;
+                            wmemd_o <= data1;
+                        end
+                        cnt <= 3'b000; 
                     end   
                 3'b000:
                     begin
@@ -82,29 +91,32 @@ begin
                                     if (mem_data_i[7] == 1'b0) 
                                         data <= {24'b0, mem_data_i};
                                     else data <= {24'b111111111111111111111111, mem_data_i};
+                              //      $display("Lb %x %x",curaddr,data);
                                     mem_done <= 1;
                                     cnt <= 3'b111;
                                 end
                             `Lbu:
                                 begin
                                     data <= {24'b0, mem_data_i};
+                             //       $display("Lb %x %x",curaddr,data);
                                     mem_done <= 1;
                                     cnt <= 3'b111;
                                 end
                             `Sb:
-                                begin
-                                    mem_done <= 1;
-                                    data <= `ZeroWord;
-                                    cnt <= 3'b111;
+                                begin 
                                     wmem_o <= 0;
+                                    mem_done <= 1;
+                                    mem_addr_o <= 0;
+                                    data <= `ZeroWord;
+                                    cnt <= 3'b111; 
                                 end
                             default:
                                 begin  
                                     cnt <= 3'b001;
+                                    if (aluop == `Sh) wmem_o <= 0;
                                     data1 <= mem_data_i;
                                     mem_addr_o <= curaddr + 2;
                                     wmemd_o <= data2;
-                                    if (aluop == `Sh) wmem_o <= 0;
                                     //$display("Assign: %b %b",data1, mem_data_i);
                                 end
                         endcase
@@ -132,6 +144,7 @@ begin
                                     data <= `ZeroWord;
                                     cnt <= 3'b111;
                                     wmem_o <= 0;
+                                    mem_addr_o <= 0;
                                 end
                             default:
                                 begin
@@ -146,13 +159,20 @@ begin
                     begin
                         data3 <= mem_data_i;
                         cnt <= 3'b011;
+                        wmem_o <= 0;
+                        wmemd_o <= 0;
+                        mem_addr_o <= 0;  
                     end    
                 3'b011:
                     begin
                         data <= {mem_data_i, data3, data2, data1};
+                    //    if (aluop == `Lw) $display("LW %x %x",curaddr,data);
+                   //     else if (aluop == `Sw) $display("SW %x %x",curaddr,data);
                         mem_done <= 1;
-                        cnt <= 3'b111;
+                        cnt <= 3'b111; 
                         wmem_o <= 0;
+                        wmemd_o <= 0;
+                        mem_addr_o <= 0;                       
                     end
                 
             endcase
@@ -169,17 +189,14 @@ begin
     if (rst == `True) 
     begin
         mem_req_o <= 0;
-        mem_req_stall <= 0;
     end
     else if (mem_done) 
     begin
         mem_req_o <= (aluop_i >= 22 && aluop_i <= 29) ? 1'b1 : 1'b0;
-        mem_req_stall <= mem_req_o;
     end
     else if (!mem_done) 
     begin
         mem_req_o <= 1;
-        mem_req_stall <= 1;
     end
 end
 

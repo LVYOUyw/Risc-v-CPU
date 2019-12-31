@@ -17,14 +17,19 @@ module cpu(
 wire if_jump;
 wire[`InstAddrBus] if_jump_addr;
 wire if_req_i;
-wire if_stall_i;
-wire if_stall_req_i;
+wire[6:0] stall;
+wire[6:0] stall_o;
+wire[`InstBus] cache_inst_i;
+wire pdd;
+wire hittt;
+wire iff;
 
 // id_in
 wire[`InstAddrBus] pc;
 wire[`InstAddrBus] id_pc_i;
 wire[`InstBus] id_inst_i;
 wire id_ignore_i;
+wire hit;
 
 //id_out
 wire[`AluOpBus] id_aluop_o;
@@ -36,6 +41,10 @@ wire id_next_ignore_o;
 wire id_current_ignore;
 wire[`InstAddrBus] id_pc_store_o;
 wire[`RegBus] id_immt;
+wire w_cache_o;
+wire[`InstBus] cache_inst;
+wire[`InstAddrBus] cache_pc;
+
 
 //ex_in
 wire[`AluOpBus] ex_aluop_i;
@@ -89,9 +98,13 @@ pc_reg pc_reg0(
     .clk(clk_in), 
     .rst(rst_in),
     .pc(pc),
+    .hit(hit),
+    .pd(pdd),
     .jump(if_jump),
-    .mem_stall(if_stall_i),
-    .if_stall(if_stall_req_i),
+    .ifing(iff),
+    .stall_i(stall),
+    .stall_o(stall_o),
+    .hitt(hittt),
     .jump_addr(if_jump_addr)
 );
 
@@ -99,14 +112,19 @@ pc_reg pc_reg0(
 if_id if_id0(
     .clk(clk_in),
     .rst(rst_in),
-    .if_request(if_req_i),
+    .if_request(if_req_i), 
     .if_pc(pc),
+    .hit(hit),
+    .lasthit(hittt),
     .if_inst(mem_din),
+    .inst_i(cache_inst_i),
     .jump(if_jump),
+    .stall_i(stall_o),
+    .stttt(stall),
     .id_pc(id_pc_i),
-    .if_stall(if_stall_i),
     .id_inst(id_inst_i),
-    .if_stall_req(if_stall_req_i)
+    .pd(pdd),
+    .ifing(iff)
 );
 
 id id0(
@@ -142,10 +160,16 @@ id id0(
     .next_ignore_o(id_next_ignore_o),
     .pc_store_o(id_pc_store_o),
     .immt(id_immt),
+
+    //id to icache
+    .w_cache(w_cache_o),
+    .inst_o(cache_inst),
+    .pc_o(cache_pc),
     
     //id to if
     .jump_o(if_jump),
-    .jump_addr_o(if_jump_addr)
+    .jump_addr_o(if_jump_addr),
+    .stall_o(stall)
 );
 
 regfile regfile0(
@@ -234,7 +258,6 @@ mem mem0(
     .wd_o(mem_wd_o),
     .wreg_o(mem_wreg_o),
     .data_o(mem_data_o),
-    .mem_req_stall(if_stall_i),
     .mem_req_o(mcu_mem_req),
     .mem_addr_o(mcu_addr_o),
     .wmem_o(mem_wmem_o),
@@ -266,6 +289,18 @@ memctrl memctrl0(
     .write_o(mem_wr),
     .wdata_i(mem_write_data),
     .wdata_o(mem_dout)
+);
+
+icache icache0(
+    .clk(clk_in),
+    .rst(rst_in),
+    .rdy(rdy_in),
+    .pc_write(cache_pc),
+    .pc_read(pc),
+    .inst_i(cache_inst),
+    .write_i(w_cache_o),
+    .hit(hit),
+    .inst_o(cache_inst_i)
 );
 
 endmodule
