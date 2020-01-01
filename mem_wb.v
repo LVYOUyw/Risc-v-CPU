@@ -2,6 +2,7 @@
 module mem_wb(
     input wire clk,
     input wire rst,
+    input wire rdy,
 
     input wire[`RegAddrBus] mem_wd,
     input wire[`RegBus] mem_data,
@@ -14,7 +15,7 @@ module mem_wb(
 
 always @ (posedge clk) 
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || rdy != `True) 
     begin
         wb_wd <= 0;
         wb_data <= 0;

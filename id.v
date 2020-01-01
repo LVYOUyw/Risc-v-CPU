@@ -1,6 +1,7 @@
 `include "defines.v"
 module id(
     input wire rst,
+    input wire rdy,
     input wire[`InstAddrBus] pc_i,
     input wire[`InstBus] inst_i,
     input wire[`RegBus] data1_i,
@@ -13,6 +14,9 @@ module id(
     input wire mem_wreg_i,
     input wire[`RegBus] mem_wdata_i,
     input wire[`RegAddrBus] mem_wd_i,
+
+    input wire last_jump,
+    input wire[`InstAddrBus] BTBaddr_i,
 
     output reg  reg1_read_o,
     output reg  reg2_read_o,
@@ -29,6 +33,9 @@ module id(
     output reg w_cache,
     output reg[`InstBus] inst_o,
     output reg[`InstAddrBus] pc_o,
+    output reg BTBwrite,
+    output reg[`InstAddrBus] BTBaddr_o,
+    output reg[`InstAddrBus] BTBpc,
 
     output reg jump_o,
     output reg[`InstAddrBus] jump_addr_o,
@@ -62,7 +69,7 @@ assign reg1_slt_reg2 = (reg1_o[31] && !reg2_o[31]) || (reg1_o[31] && reg2_o[31] 
 
 always @ (*) 
 begin
-    if (rst == `RstEnable || ignore_i == 1'b1) //ignore not use
+    if (rst == `RstEnable || ignore_i == 1'b1 || rdy != `True) //ignore not use
     begin
         aluop_o <= 0;
         wd_o <= 0;
@@ -81,6 +88,9 @@ begin
         inst_o <= 0;
         pc_o <= 0;
         stall_o <= 0;
+        BTBwrite <= 0;
+        BTBpc <= 0;
+        BTBaddr_o <= 0;
     end
     else 
     begin
@@ -98,6 +108,9 @@ begin
         pc_store_o <= `ZeroWord;
         next_ignore_o <= `False;
         jump_o <= `False;
+        BTBwrite <= 0;
+        BTBpc <= 0;
+        BTBaddr_o <= 0;
         if (inst_i != 32'b0) 
         begin
             w_cache <= 1;
@@ -217,8 +230,11 @@ begin
                 imm <= {11'b11111111111, inst_i[31], inst_i[19:12], inst_i[20], inst_i[30:21], 1'b0};
             pc_store_o <= pc_plus_4;
             jump_addr_o <=  goal1;
-            jump_o <= `True;
-            next_ignore_o <= `True;
+            next_ignore_o <= last_jump == 1 && goal1 == BTBaddr_i ? `False : `True;
+            jump_o <= last_jump == 1 && goal1 == BTBaddr_i ? `False : `True;
+            /*BTBaddr_o <= goal1;
+            BTBwrite <=  1;
+            BTBpc <= pc_sub_4;*/
             aluop_o <= `Jal;
         end
         else if (opcode == `Opcode_jalr) 
@@ -230,8 +246,11 @@ begin
             else imm <= {20'b11111111111111111111, inst_i[31:20]};
             pc_store_o <= pc_plus_4;
             jump_addr_o <= goal2 & (~(32'b1));
-            jump_o <= `True;
-            next_ignore_o <= `True;
+            jump_o <= last_jump == 1 && (goal2 & (~(32'b1))) == BTBaddr_i ? `False : `True;
+            next_ignore_o <= last_jump == 1 && (goal2 & (~(32'b1))) == BTBaddr_i ? `False : `True;
+            /*BTBaddr_o <= goal2 & (~(32'b1));
+            BTBwrite <=  1;
+            BTBpc <= pc_sub_4;*/
             aluop_o <= `Jalr;
         end
         else if (opcode == `Opcode_B)
@@ -246,44 +265,116 @@ begin
                 `Funct3_beq:
                     if (reg1_o == reg2_o) 
                     begin 
-                        next_ignore_o <= `True;
+                        next_ignore_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                        BTBaddr_o <= goal1;
+                        BTBwrite <=  1;
+                        BTBpc <= pc_sub_4;
                         jump_addr_o <= goal1;
-                        jump_o <= `True;
+                        jump_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                    end
+                    else 
+                    begin
+                        if (last_jump == 1) 
+                        begin
+                            jump_addr_o <= pc_plus_4;
+                            jump_o <= 1;
+                            next_ignore_o <= 1;
+                        end
                     end
                 `Funct3_bne:
                     if (reg1_o != reg2_o) 
                     begin
-                        next_ignore_o <= `True;
+                        next_ignore_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                        BTBaddr_o <= goal1;
+                        BTBwrite <=  1;
+                        BTBpc <= pc_sub_4;
                         jump_addr_o <= goal1;
-                        jump_o <= `True;
+                        jump_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                    end
+                    else 
+                    begin
+                        if (last_jump == 1) 
+                        begin
+                            jump_addr_o <= pc_plus_4;
+                            jump_o <= 1;
+                            next_ignore_o <= 1;
+                        end
                     end
                 `Funct3_blt:
                     if (reg1_slt_reg2 == 1'b1)  //signed 
                     begin 
-                        next_ignore_o <= `True;
+                        next_ignore_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                        BTBaddr_o <= goal1;
+                        BTBwrite <=  1;
+                        BTBpc <= pc_sub_4;
                         jump_addr_o <= goal1;
-                        jump_o <= `True;
+                        jump_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                    end
+                    else 
+                    begin
+                        if (last_jump == 1) 
+                        begin
+                            jump_addr_o <= pc_plus_4;
+                            jump_o <= 1;
+                            next_ignore_o <= 1;
+                        end
                     end
                 `Funct3_bge:
                     if (reg1_slt_reg2 == 1'b0) //signed
                     begin
-                        next_ignore_o <= `True;
+                        next_ignore_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                        BTBaddr_o <= goal1;
+                        BTBwrite <=  1;
+                        BTBpc <= pc_sub_4;
                         jump_addr_o <= goal1;
-                        jump_o <= `True;
+                        jump_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                    end
+                    else 
+                    begin
+                        if (last_jump == 1) 
+                        begin
+                            jump_addr_o <= pc_plus_4;
+                            jump_o <= 1;
+                            next_ignore_o <= 1;
+                        end
                     end
                 `Funct3_bltu:
                     if (reg1_o < reg2_o) //unsigned 
                     begin
-                        next_ignore_o <= `True;
+                        next_ignore_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                        BTBaddr_o <= goal1;
+                        BTBwrite <= 1;
+                        BTBpc <= pc_sub_4;
                         jump_addr_o <= goal1;
-                        jump_o <= `True;
+                        jump_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                    end
+                    else 
+                    begin
+                        if (last_jump == 1) 
+                        begin
+                            jump_addr_o <= pc_plus_4;
+                            jump_o <= 1;
+                            next_ignore_o <= 1;
+                        end
                     end
                 `Funct3_bgeu:
                     if (reg1_o >= reg2_o) //unsigned 
                     begin
-                        next_ignore_o <= `True;
+                        next_ignore_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                        BTBaddr_o <= goal1;
+                        BTBwrite <=  1;
+                        BTBpc <= pc_sub_4;
                         jump_addr_o <= goal1;
-                        jump_o <= `True;
+                        jump_o <= last_jump == 1 && goal1 == BTBaddr_i  ? `False : `True;
+                    end
+                    else 
+                    begin
+                        if (last_jump == 1) 
+                        begin
+                            jump_addr_o <= pc_plus_4;
+                            jump_o <= 1;
+                            next_ignore_o <= 1;
+                        end
                     end
             endcase
         end 

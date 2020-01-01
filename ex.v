@@ -1,6 +1,7 @@
 `include "defines.v"
 module ex(
     input wire rst,
+    input wire rdy,
     input wire[`AluOpBus] aluop_i,
     input wire[`RegBus] reg1_i,
     input wire[`RegBus] reg2_i,
@@ -30,7 +31,7 @@ assign reg1_slt_reg2 = (!reg1_i[31] && reg2_i[31]) || (reg1_i[31] && reg2_i[31] 
 
 always @ (*) 
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || rdy != `True) 
     begin
         data_o <= `ZeroWord;
         wd_o <= 0;

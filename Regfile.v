@@ -2,6 +2,7 @@
 module regfile(
     input wire clk,
     input wire rst,
+    input wire rdy,
 
 //  write port 
     input wire we,
@@ -35,7 +36,7 @@ end
 
 always @ (posedge clk)              //write
 begin
-    if (rst == `RstDisable) 
+    if (rst == `RstDisable && rdy == `True) 
         if ((we == `WriteEnable) && (waddr != 5'h0)) 
         begin
             regs[waddr] <= wdata;
@@ -46,7 +47,7 @@ end
 
 always @ (*) 
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || rdy != `True) 
         rdata1 <= `ZeroWord;
     else if (raddr1 == 5'h0) 
         rdata1 <= `ZeroWord;
@@ -60,7 +61,7 @@ end
 
 always @ (*) 
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || rdy!= `True) 
         rdata2 <= `ZeroWord;
     else if (raddr2 == 5'h0) 
         rdata2 <= `ZeroWord;

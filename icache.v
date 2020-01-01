@@ -23,9 +23,9 @@ integer i;
 
 always @(posedge clk) 
 begin
-    if (rst == `True) 
+    if (rst == `True || rdy != `True) 
     begin
-        for (i = 0; i < 255; i = i + 1) cache_vaild[i] <= 0;
+        for (i = 0; i < 256; i = i + 1) cache_vaild[i] <= 0;
     end
     else if (write_i == `True) 
     begin

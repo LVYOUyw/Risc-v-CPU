@@ -1,6 +1,7 @@
 `include "defines.v" 
 module mem(
     input wire rst,
+    input wire rdy,
     input wire clk,
     input wire[`RegAddrBus] wd_i,
     input wire[`RegBus] data_i,
@@ -9,12 +10,18 @@ module mem(
     input wire[`InstAddrBus] mem_addr_i,
     input wire[`AluOpBus] aluop_i,
 
+   // input wire hit,
+   // input wire[`InstAddrBus] cache_data,
+
     output reg[`RegAddrBus] wd_o,
     output reg wreg_o,
     output reg wmem_o,
     output reg[7:0] wmemd_o,
     output reg[`RegBus] data_o,
     output reg mem_req_o,
+
+  //  output reg write_cache,
+
     output reg[`InstAddrBus] mem_addr_o
 );
 reg mem_done;
@@ -32,7 +39,7 @@ reg[31:0] data;
 
 always @ (posedge clk)
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || rdy != `True) 
     begin
         cnt <= 3'b111;
         data1 <= 0;
@@ -56,10 +63,10 @@ begin
                         cnt <= 3'b100;
                         state <= 1'b1;
                         curaddr <= mem_addr_i;
-                        mem_done <= 0;
+                        mem_done <= 0; 
+                        wmem_o <= (aluop_i >= 27 && aluop_i <= 29) ? 1'b1 : 1'b0;
                         mem_addr_o <= mem_addr_i;
                         wmemd_o <= data_i[7:0];
-                        wmem_o <= (aluop_i >= 27 && aluop_i <= 29) ? 1'b1 : 1'b0;
                         wd <= wd_i;
                         wreg <= wreg_i;
                         aluop <= aluop_i;
@@ -159,9 +166,6 @@ begin
                     begin
                         data3 <= mem_data_i;
                         cnt <= 3'b011;
-                        wmem_o <= 0;
-                        wmemd_o <= 0;
-                        mem_addr_o <= 0;  
                     end    
                 3'b011:
                     begin
@@ -186,7 +190,7 @@ end
  
 always @ (*) 
 begin
-    if (rst == `True) 
+    if (rst == `True || rdy != `True) 
     begin
         mem_req_o <= 0;
     end
@@ -202,7 +206,7 @@ end
 
 always @ (*) 
 begin
-    if (rst == `True) 
+    if (rst == `True || rdy != `True) 
     begin
         wd_o <= 0;
         data_o <= 0;

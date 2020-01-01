@@ -2,10 +2,13 @@
 module if_id(
     input wire clk,
     input wire rst,
+    input wire rdy,
     input wire[`InstAddrBus] if_pc,
     input wire[7:0] if_inst,
     input wire[31:0] inst_i,
     input wire jump,
+    input wire last_jump,
+
     input wire[6:0] stall_i,
     input wire[6:0] stttt,
     input wire hit,
@@ -22,11 +25,11 @@ reg[7:0] inst2;
 reg[7:0] inst3;
 reg[3:0] tmp;
 reg[6:0] stall;
-reg[6:0] stt;
+reg stt;
  
 always @ (posedge clk) 
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || rdy != `True) 
     begin
         id_pc <= `ZeroWord;
         id_inst <= `ZeroWord;
@@ -36,13 +39,14 @@ begin
         stall <= 0;
         pd <= 0;
         ifing <= 0;
+        stt <= 0;
     end 
     else if (stall == 0) 
     begin
         id_pc <= 0;
         id_inst <= 0;
         stall <= stall_i;
-        stt <= stttt;
+        stt <= stttt == 0 ? 0 : 1;
         pd <= 0;
         if (hit == 1'b1 && ifing != 1'b1) 
         begin
@@ -94,7 +98,12 @@ begin
                 default:
                     begin
                     end
-            endcase
+            endcase    
+        if (last_jump == `True) 
+        begin
+            cnt <= 3'b000;
+            ifing <= 0;
+        end 
         if (jump == `True)
         begin
             cnt <= 3'b110;    
@@ -108,8 +117,6 @@ begin
         id_inst <= 0;
         id_pc <= 0;
         pd <= 0;
-        //if_request <= `False;
-       // cnt <= 3'b101;
     end
 end
 

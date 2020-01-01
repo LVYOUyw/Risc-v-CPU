@@ -2,7 +2,7 @@
 module ex_mem(
     input wire clk,
     input wire rst,
-
+    input wire rdy,
     input wire[`RegAddrBus] ex_wd,
     input wire ex_wreg,
     input wire[`RegBus] ex_data,
@@ -18,7 +18,7 @@ module ex_mem(
 
 always @ (posedge clk)  
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || rdy != `True) 
     begin
         mem_wd <= 0;
         mem_wreg <= 0;

@@ -23,6 +23,7 @@ wire[`InstBus] cache_inst_i;
 wire pdd;
 wire hittt;
 wire iff;
+wire[`InstAddrBus] pc_plus_4;
 
 // id_in
 wire[`InstAddrBus] pc;
@@ -94,17 +95,31 @@ wire mcu_mem_req;
 wire[`InstAddrBus] mcu_addr_o;
 wire[7:0] mem_write_data;
 
+//BTB
+wire BTBhit;
+wire[`InstAddrBus] BTBaddr_i;
+wire[`InstAddrBus] BTBaddr_o;
+wire[`InstAddrBus] BTBpc;
+wire BTBjump;
+wire[`InstAddrBus] pc_BTBaddr;
+wire BTBwrite;
+
 pc_reg pc_reg0(
     .clk(clk_in), 
     .rst(rst_in),
+    .rdy(rdy_in),
     .pc(pc),
     .hit(hit),
+    .BTBhit(BTBhit),
+    .BTBaddr(BTBaddr_i),
     .pd(pdd),
     .jump(if_jump),
     .ifing(iff),
     .stall_i(stall),
     .stall_o(stall_o),
     .hitt(hittt),
+    .last_jump(BTBjump),
+    .BTBaddr_o(pc_BTBaddr),
     .jump_addr(if_jump_addr)
 );
 
@@ -112,9 +127,11 @@ pc_reg pc_reg0(
 if_id if_id0(
     .clk(clk_in),
     .rst(rst_in),
+    .rdy(rdy_in),
     .if_request(if_req_i), 
     .if_pc(pc),
     .hit(hit),
+    .last_jump(BTBjump),
     .lasthit(hittt),
     .if_inst(mem_din),
     .inst_i(cache_inst_i),
@@ -129,9 +146,14 @@ if_id if_id0(
 
 id id0(
     .rst(rst_in),
+    .rdy(rdy_in),
     .pc_i(id_pc_i),
     .inst_i(id_inst_i),
     .ignore_i(id_current_ignore),
+
+    //BTB to id
+    .last_jump(BTBjump),
+    .BTBaddr_i(pc_BTBaddr),
 
     //ex to id
     .ex_wreg_i(ex_wreg_o),
@@ -165,6 +187,11 @@ id id0(
     .w_cache(w_cache_o),
     .inst_o(cache_inst),
     .pc_o(cache_pc),
+
+    //id to BTB
+    .BTBwrite(BTBwrite),
+    .BTBpc(BTBpc),
+    .BTBaddr_o(BTBaddr_o),
     
     //id to if
     .jump_o(if_jump),
@@ -175,6 +202,7 @@ id id0(
 regfile regfile0(
     .clk(clk_in),
     .rst(rst_in),
+    .rdy(rdy_in),
     .we(wb_wreg_i),
     .waddr(wb_wd_i),
     .wdata(wb_data_i),
@@ -189,7 +217,7 @@ regfile regfile0(
 id_ex id_ex0(
     .clk(clk_in),
     .rst(rst_in),
-
+    .rdy(rdy_in),
     .id_aluop(id_aluop_o),
     .id_reg1(id_reg1_o),
     .id_reg2(id_reg2_o),
@@ -212,7 +240,7 @@ id_ex id_ex0(
 
 ex ex0(
     .rst(rst_in),
-
+    .rdy(rdy_in),
     .aluop_i(ex_aluop_i),
     .reg1_i(ex_reg1_i),
     .reg2_i(ex_reg2_i),
@@ -231,7 +259,7 @@ ex ex0(
 ex_mem ex_mem0(
     .clk(clk_in),
     .rst(rst_in),
-
+    .rdy(rdy_in),
     .ex_wd(ex_wd_o),
     .ex_wreg(ex_wreg_o),
     .ex_data(ex_data_o),
@@ -247,6 +275,7 @@ ex_mem ex_mem0(
 
 mem mem0(
     .rst(rst_in),
+    .rdy(rdy_in),
     .clk(clk_in),
     .wd_i(mem_wd_i),
     .wreg_i(mem_wreg_i),
@@ -267,7 +296,7 @@ mem mem0(
 mem_wb mem_wb0(
     .clk(clk_in),
     .rst(rst_in),
-
+    .rdy(rdy_in),
     .mem_wd(mem_wd_o),
     .mem_wreg(mem_wreg_o),
     .mem_data(mem_data_o),
@@ -301,6 +330,18 @@ icache icache0(
     .write_i(w_cache_o),
     .hit(hit),
     .inst_o(cache_inst_i)
+);
+
+BTB BTB0(
+    .clk(clk_in),
+    .rst(rst_in),
+    .rdy(rdy_in),
+    .pc_write(BTBpc),
+    .pc_read(pc),
+    .addr_i(BTBaddr_o),
+    .write_i(BTBwrite),
+    .hit(BTBhit),
+    .addr_o(BTBaddr_i)
 );
 
 endmodule

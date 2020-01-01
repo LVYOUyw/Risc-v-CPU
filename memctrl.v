@@ -26,7 +26,7 @@ begin
         write_o <=  write_i ;
         mem_addr_o <= mem_addr_i;
         wdata_o <= wdata_i;
-       // if (write_o == 1'b1) $display("FUCK %x %x",mem_addr_o,wdata_o);
+       // if (write_o == 1'b1 && mem_addr_o == 32'h30000) $display("FUCK %d %c",mem_addr_o,wdata_o,wdata_o);
     end
     else if (if_request == `True) 
     begin

@@ -2,6 +2,7 @@
 module id_ex(
     input wire clk,
     input wire rst,
+    input wire rdy,
     input wire[5:0] id_aluop, 
     input wire[`RegBus] id_reg1,
     input wire[`RegBus] id_reg2,
@@ -23,7 +24,7 @@ module id_ex(
 
 always @ (posedge clk) 
 begin
-    if (rst == `RstEnable) 
+    if (rst == `RstEnable || rdy != `True) 
     begin
         ex_aluop <= 0;
         ex_reg1 <= 0;
